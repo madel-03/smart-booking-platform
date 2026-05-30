@@ -23,7 +23,7 @@ function App() {
     setMessage('');
     setError('');
     try {
-      const response = await axios.post('http://localhost:5000/api/appointments', formData);
+      const response = await axios.post('https://smart-booking-platform.onrender.com', formData);
       setMessage(response.data.message);
       setFormData({ customerName: '', phone: '', service: '', date: '', time: '' });
     } catch (err) {
