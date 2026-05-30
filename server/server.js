@@ -8,7 +8,7 @@ app.use(cors());
 app.use(express.json());
 
 // رابط MongoDB الصحيح
-const MONGO_URI = 'mongodb://admin:T9iwJ6QH8hTi8Q5p@ac-rnj5kbb-shard-00-00.5buf02i.mongodb.net:27017,ac-rnj5kbb-shard-00-01.5buf02i.mongodb.net:27017,ac-rnj5kbb-shard-00-02.5buf02i.mongodb.net:27017/SherlockAgency?ssl=true&replicaSet=atlas-6cjcc7-shard-0&authSource=admin&appName=Cluster0';// الاتصال بقاعدة البيانات
+const MONGO_URI = 'mongodb://admin:admin10@ac-rnj5kbb-shard-00-00.5buf02i.mongodb.net:27017,ac-rnj5kbb-shard-00-01.5buf02i.mongodb.net:27017,ac-rnj5kbb-shard-00-02.5buf02i.mongodb.net:27017/?ssl=true&replicaSet=atlas-6cjcc7-shard-0&authSource=admin&appName=Cluster0';// الاتصال بقاعدة البيانات
 mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ تم الاتصال بقاعدة البيانات بنجاح!'))
     .catch(err => console.error('❌ خطأ في الاتصال بقاعدة البيانات:', err));
