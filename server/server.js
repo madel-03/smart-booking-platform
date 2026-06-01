@@ -5,9 +5,7 @@ const cors = require('cors');
  
 const app = express();
  
-app.use(cors({
-  origin: 'https://smart-booking-platform-lilac.vercel.app'
-}));
+app.use(cors()); // يفتح الاتصال تلقائياً لجميع الروابط
 app.use(express.json());
  
 // رابط MongoDB من البيئة
@@ -63,4 +61,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🔥 Server running on port ${PORT}`);
 });
- 
+
