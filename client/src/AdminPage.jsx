@@ -1,138 +1,154 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import './App.css';
 
-const ADMIN_PASSWORD = 'sherlock221b';
+// جلب الرابط من متغيرات البيئة في Vercel، وإذا مش موجود يستخدم المحلي كاحتياط
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 function AdminPage() {
-  const [entered, setEntered] = useState(false);
-  const [password, setPassword] = useState('');
-  const [wrongPass, setWrongPass] = useState(false);
-  const [appointments, setAppointments] = useState([]);
+    const [appointments, setAppointments] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-  const handleLogin = () => {
-    if (password === ADMIN_PASSWORD) {
-      setEntered(true);
-      setWrongPass(false);
-    } else {
-      setWrongPass(true);
-    }
-  };
+    // 1. جلب المواعيد من السيرفر عند تحميل الصفحة
+    useEffect(() => {
+        fetchAppointments();
+    }, []);
 
-  const fetchAppointments = async () => {
-    try {
-      const response = await axios.get('http://localhost:5000/api/appointments');
-      setAppointments(response.data);
-    } catch (err) {
-      console.error('خطأ في جلب المواعيد:', err);
-    }
-  };
+    const fetchAppointments = async () => {
+        try {
+            setLoading(true);
+            const response = await axios.get(`${API_URL}/api/appointments`);
+            setAppointments(response.data);
+            setError(null);
+        } catch (err) {
+            console.error('خطأ في جلب المواعيد:', err);
+            setError('فشل في جلب البيانات من السيرفر. تأكد من اتصال الشبكة ورابط الـ API.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  useEffect(() => {
-    if (entered) fetchAppointments();
-  }, [entered]);
+    // 2. تحديث حالة الحجز (PATCH)
+    const handleStatusChange = async (id, newStatus) => {
+        try {
+            const response = await axios.patch(`${API_URL}/api/appointments/${id}`, { status: newStatus });
+            if (response.status === 200) {
+                // تحديث الحالة في الواجهة فوراً بدون إعادة تحميل الصفحة كاملة
+                setAppointments(appointments.map(app => app._id === id ? { ...app, status: newStatus } : app));
+                alert('🎉 تم تحديث حالة القضية بنجاح!');
+            }
+        } catch (err) {
+            console.error('خطأ في تحديث الحالة:', err);
+            alert('❌ فشل في تحديث الحالة، جرب مرة أخرى.');
+        }
+    };
 
-  if (!entered) {
+    // 3. حذف الحجز نهائياً (DELETE)
+    const handleDelete = async (id) => {
+        if (window.confirm('هل أنت متأكد من إغلاق وحذف ملف هذه القضية نهائياً؟')) {
+            try {
+                const response = await axios.delete(`${API_URL}/api/appointments/${id}`);
+                if (response.status === 200) {
+                    // إزالة الحجز من القائمة في الواجهة فوراً
+                    setAppointments(appointments.filter(app => app._id !== id));
+                    alert('🗑️ تم مسح سجل القضية بنجاح!');
+                }
+            } catch (err) {
+                console.error('خطأ في حذف الحجز:', err);
+                alert('❌ فشل في حذف القضية.');
+            }
+        }
+    };
+
     return (
-      <div className="sherlock-theme" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="case-file-card" style={{ maxWidth: '360px', width: '100%', textAlign: 'center' }}>
-          <div className="magnifier-icon" style={{ fontSize: '40px', marginBottom: '10px' }}>🔒</div>
-          <h2 style={{ marginBottom: '20px' }}>دخول المحقق</h2>
-
-          <div className="form-group">
-            <input
-              type="password"
-              placeholder="أدخل كلمة السر..."
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-              style={{ width: '100%', textAlign: 'center' }}
-            />
-          </div>
-
-          {wrongPass && (
-            <p style={{ color: '#f44336', marginBottom: '10px', fontWeight: 'bold' }}>
-              كلمة السر غلط، حاول مرة ثانية
-            </p>
-          )}
-
-          <button
-            onClick={handleLogin}
-            className="sherlock-btn"
-            style={{ width: '100%', cursor: 'pointer', marginTop: '10px' }}
-          >
-            🔑 دخول
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="sherlock-theme">
-      <header className="sherlock-header">
-        <div className="magnifier-icon">🔍</div>
-        <h1>221B Booking Agency</h1>
-        <p>لوحة تحكم المحقق</p>
-        <button
-          onClick={() => setEntered(false)}
-          style={{ marginTop: '10px', padding: '6px 16px', cursor: 'pointer', borderRadius: '8px', border: 'none', background: '#444', color: '#fff' }}
-        >
-          تسجيل خروج
-        </button>
-      </header>
-
-      <main className="sherlock-main">
-        <div className="dashboard-card">
-          <h2>📊 لوحة تحكم القضايا (Dashboard)</h2>
-
-          <div className="stats-container">
-            <div className="stat-box">
-              <span className="stat-title">إجمالي الحجوزات</span>
-              <span className="stat-number">{appointments.length}</span>
+        <div style={{ backgroundColor: '#1e1610', color: '#f1e4d3', minHeight: '100vh', padding: '40px', fontFamily: 'Courier New, monospace' }}>
+            <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                <span style={{ fontSize: '50px' }}>🔍</span>
+                <h1 style={{ color: '#d4af37', margin: '10px 0' }}>221B Booking Agency</h1>
+                <p style={{ letterSpacing: '2px', textTransform: 'uppercase', color: '#a09080' }}>لوحة تحكم المحقق</p>
+                <hr style={{ width: '150px', borderColor: '#d4af37', margin: '20px auto' }} />
             </div>
-            <div className="stat-box highlight">
-              <span className="stat-title">الحالة الأمنية</span>
-              <span className="stat-number">مستقر</span>
-            </div>
-          </div>
 
-          <div className="table-responsive">
-            <table className="sherlock-table">
-              <thead>
-                <tr>
-                  <th>المستنتج</th>
-                  <th>المهمة</th>
-                  <th>التاريخ</th>
-                  <th>التوقيت</th>
-                  <th>الحالة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {appointments.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
-                      لا توجد قضايا مجدولة حالياً...
-                    </td>
-                  </tr>
+            <div style={{ maxWidth: '1000px', margin: '0 auto', backgroundColor: '#2c2017', padding: '30px', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', border: '1px solid #3d2f24' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', borderBottom: '1px dashed #524132', paddingBottom: '15px' }}>
+                    <h2 style={{ margin: 0, fontSize: '22px' }}>📊 لوحة تحكم القضايا (Dashboard)</h2>
+                    <div style={{ display: 'flex', gap: '20px' }}>
+                        <div style={{ padding: '10px 20px', backgroundColor: '#1e1610', borderRadius: '4px', border: '1px solid #524132', textAlign: 'center' }}>
+                            <div style={{ fontSize: '12px', color: '#a09080', marginBottom: '5px' }}>إجمالي الحجوزات</div>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#d4af37' }}>{appointments.length}</div>
+                        </div>
+                        <div style={{ padding: '10px 20px', backgroundColor: '#1e1610', borderRadius: '4px', border: '1px solid #524132', textAlign: 'center' }}>
+                            <div style={{ fontSize: '12px', color: '#a09080', marginBottom: '5px' }}>الحالة الأمنية</div>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#27ae60' }}>مستقر</div>
+                        </div>
+                    </div>
+                </div>
+
+                {loading ? (
+                    <p style={{ textAlign: 'center', color: '#a09080', fontStyle: 'italic' }}>🕵️‍♂️ جاري البحث وجمع الأدلة المجدولة...</p>
+                ) : error ? (
+                    <div style={{ textAlign: 'center', color: '#e74c3c', padding: '20px', border: '1px solid #e74c3c', borderRadius: '4px' }}>{error}</div>
+                ) : appointments.length === 0 ? (
+                    <p style={{ textAlign: 'center', color: '#a09080', fontStyle: 'italic' }}>...لا توجد قضايا مجدولة حالياً</p>
                 ) : (
-                  appointments.map((app) => (
-                    <tr key={app._id || app.id}>
-                      <td>{app.customerName}</td>
-                      <td>{app.service}</td>
-                      <td>{app.date}</td>
-                      <td>{app.time}</td>
-                      <td><span className="status-badge">{app.status}</span></td>
-                    </tr>
-                  ))
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }} dir="rtl">
+                            <thead>
+                                <tr style={{ borderBottom: '2px solid #d4af37', color: '#d4af37' }}>
+                                    <th style={{ padding: '12px' }}>المستنتج (العميل)</th>
+                                    <th style={{ padding: '12px' }}>رقم التواصل</th>
+                                    <th style={{ padding: '12px' }}>المهمة (الخدمة)</th>
+                                    <th style={{ padding: '12px' }}>التاريخ</th>
+                                    <th style={{ padding: '12px' }}>التوقيت</th>
+                                    <th style={{ padding: '12px' }}>الحالة</th>
+                                    <th style={{ padding: '12px', textAlign: 'center' }}>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {appointments.map((app) => (
+                                    <tr key={app._id} style={{ borderBottom: '1px solid #3d2f24', transition: 'background 0.2s' }}>
+                                        <td style={{ padding: '15px 12px', fontWeight: 'bold' }}>{app.customerName}</td>
+                                        <td style={{ padding: '15px 12px', color: '#a09080' }}>{app.phone}</td>
+                                        <td style={{ padding: '15px 12px' }}>{app.service}</td>
+                                        <td style={{ padding: '15px 12px', color: '#a09080' }}>{app.date}</td>
+                                        <td style={{ padding: '15px 12px', color: '#a09080' }}>{app.time}</td>
+                                        <td style={{ padding: '15px 12px' }}>
+                                            <span style={{
+                                                padding: '4px 8px',
+                                                borderRadius: '4px',
+                                                fontSize: '12px',
+                                                fontWeight: 'bold',
+                                                backgroundColor: app.status === 'Pending' ? '#d35400' : '#27ae60',
+                                                color: '#fff'
+                                            }}>
+                                                {app.status === 'Pending' ? 'قيد الانتظار ⏳' : 'حُلّت القضية ✅'}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '15px 12px', textAlign: 'center' }}>
+                                            {app.status === 'Pending' && (
+                                                <button 
+                                                    onClick={() => handleStatusChange(app._id, 'Resolved')}
+                                                    style={{ backgroundColor: '#27ae60', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', marginLeft: '8px', fontSize: '12px', fontWeight: 'bold' }}
+                                                >
+                                                    حل القضية
+                                                </button>
+                                            )}
+                                            <button 
+                                                onClick={() => handleDelete(app._id)}
+                                                style={{ backgroundColor: '#c0392b', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                                            >
+                                                حذف Record
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
-              </tbody>
-            </table>
-          </div>
+            </div>
         </div>
-      </main>
-    </div>
-  );
+    );
 }
 
 export default AdminPage;

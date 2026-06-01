@@ -23,7 +23,8 @@ function App() {
     setMessage('');
     setError('');
     try {
-      const response = await axios.post('https://smart-booking-platform.onrender.com/api/appointments', formData);
+      const response =
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/appointments`, formData);
 
       setMessage(response.data.message);
       setFormData({ customerName: '', phone: '', service: '', date: '', time: '' });

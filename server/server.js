@@ -1,4 +1,3 @@
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -31,7 +30,7 @@ const appointmentSchema = new mongoose.Schema({
 // إنشاء Model
 const Appointment = mongoose.model('Appointment', appointmentSchema);
  
-// جلب جميع الحجوزات
+// 1. جلب جميع الحجوزات
 app.get('/api/appointments', async (req, res) => {
     try {
         const appointments = await Appointment.find({});
@@ -41,7 +40,7 @@ app.get('/api/appointments', async (req, res) => {
     }
 });
  
-// إضافة حجز جديد
+// 2. إضافة حجز جديد
 app.post('/api/appointments', async (req, res) => {
     try {
         const newAppointment = new Appointment(req.body);
@@ -54,6 +53,37 @@ app.post('/api/appointments', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// 3. تعديل حالة حجز معين (جديد)
+app.patch('/api/appointments/:id', async (req, res) => {
+    try {
+        const { status } = req.body;
+        const updatedAppointment = await Appointment.findByIdAndUpdate(
+            req.params.id,
+            { status },
+            { new: true }
+        );
+        if (!updatedAppointment) {
+            return res.status(404).json({ message: 'الحجز غير موجود' });
+        }
+        res.json(updatedAppointment);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 4. مسح حجز معين (جديد)
+app.delete('/api/appointments/:id', async (req, res) => {
+    try {
+        const deletedAppointment = await Appointment.findByIdAndDelete(req.params.id);
+        if (!deletedAppointment) {
+            return res.status(404).json({ message: 'الحجز غير موجود' });
+        }
+        res.json({ message: 'تم حذف الموعد بنجاح' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
  
 // تشغيل السيرفر
 const PORT = process.env.PORT || 5000;
@@ -61,4 +91,3 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🔥 Server running on port ${PORT}`);
 });
-
