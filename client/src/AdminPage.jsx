@@ -9,10 +9,17 @@ function AdminPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // 1. جلب المواعيد من السيرفر عند تحميل الصفحة
+    // 🔐 حالات التحقق من كلمة السر (تتحقق إذا كان مسجل دخول مسبقاً في المتصفح)
+    const [isAuthenticated, setIsAuthenticated] = useState(localStorage.getItem('isAdminLoggedIn') === 'true');
+    const [passwordInput, setPasswordInput] = useState('');
+    const [loginError, setLoginError] = useState('');
+
+    // جلب المواعيد عند تحميل الصفحة (فقط إذا كان مصرحاً له)
     useEffect(() => {
-        fetchAppointments();
-    }, []);
+        if (isAuthenticated) {
+            fetchAppointments();
+        }
+    }, [isAuthenticated]);
 
     const fetchAppointments = async () => {
         try {
@@ -28,12 +35,31 @@ function AdminPage() {
         }
     };
 
-    // 2. تحديث حالة الحجز (PATCH)
+    // 🔑 دالة التحقق من كلمة السر عند الضغط على زر الدخول
+    const handleLogin = (e) => {
+        e.preventDefault();
+       
+        if (passwordInput === 'sherlock221b') {
+            localStorage.setItem('isAdminLoggedIn', 'true');
+            setIsAuthenticated(true);
+            setLoginError('');
+        } else {
+            setLoginError('❌ كلمة المرور غير صحيحة، حاول مجدداً أيها المحقق.');
+        }
+    };
+
+    // 🚪 دالة تسجيل الخروج (إلغاء التصريح)
+    const handleLogout = () => {
+        localStorage.removeItem('isAdminLoggedIn');
+        setIsAuthenticated(false);
+        setPasswordInput('');
+    };
+
+    // تحديث حالة الحجز (PATCH)
     const handleStatusChange = async (id, newStatus) => {
         try {
             const response = await axios.patch(`${API_URL}/api/appointments/${id}`, { status: newStatus });
             if (response.status === 200) {
-                // تحديث الحالة في الواجهة فوراً بدون إعادة تحميل الصفحة كاملة
                 setAppointments(appointments.map(app => app._id === id ? { ...app, status: newStatus } : app));
                 alert('🎉 تم تحديث حالة القضية بنجاح!');
             }
@@ -43,13 +69,12 @@ function AdminPage() {
         }
     };
 
-    // 3. حذف الحجز نهائياً (DELETE)
+    // حذف الحجز نهائياً (DELETE)
     const handleDelete = async (id) => {
         if (window.confirm('هل أنت متأكد من إغلاق وحذف ملف هذه القضية نهائياً؟')) {
             try {
                 const response = await axios.delete(`${API_URL}/api/appointments/${id}`);
                 if (response.status === 200) {
-                    // إزالة الحجز من القائمة في الواجهة فوراً
                     setAppointments(appointments.filter(app => app._id !== id));
                     alert('🗑️ تم مسح سجل القضية بنجاح!');
                 }
@@ -60,9 +85,50 @@ function AdminPage() {
         }
     };
 
+    // 🛑 1. إذا كان المستخدم غير مسجل دخول، اعرض صفحة القفل الثيمية الخاصة بالوكالة
+    if (!isAuthenticated) {
+        return (
+            <div style={{ backgroundColor: '#1e1610', color: '#f1e4d3', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'Courier New, monospace', padding: '20px' }}>
+                <div style={{ maxWidth: '450px', width: '100%', backgroundColor: '#2c2017', padding: '40px', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', border: '1px solid #3d2f24', textAlign: 'center' }}>
+                    <span style={{ fontSize: '60px' }}>🔒</span>
+                    <h2 style={{ color: '#d4af37', marginTop: '10px' }}>منطقة محظورة</h2>
+                    <p style={{ color: '#a09080', fontSize: '14px', marginBottom: '25px' }}>يتطلب الدخول إلى لوحة تحكم المحقق كلمة سر مشفرة.</p>
+                    
+                    <form onSubmit={handleLogin}>
+                        <input 
+                            type="password" 
+                            placeholder="أدخل كلمة السر الأمنيّة..." 
+                            value={passwordInput}
+                            onChange={(e) => setPasswordInput(e.target.value)}
+                            style={{ width: '100%', padding: '12px', marginBottom: '15px', backgroundColor: '#1e1610', border: '1px solid #524132', borderRadius: '4px', color: '#f1e4d3', textAlign: 'center', fontSize: '16px', outline: 'none' }}
+                            required
+                        />
+                        <button 
+                            type="submit"
+                            style={{ width: '100%', padding: '12px', backgroundColor: '#d4af37', color: '#1e1610', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold', transition: '0.2s' }}
+                        >
+                            فك التشفير والدخول 🕵️‍♂️
+                        </button>
+                    </form>
+                    
+                    {loginError && <p style={{ color: '#e74c3c', marginTop: '15px', fontSize: '14px', fontWeight: 'bold' }}>{loginError}</p>}
+                </div>
+            </div>
+        );
+    }
+
+    // 🟢 2. إذا كان مسجل دخول بنجاح، اعرض لوحة التحكم الكاملة مع إضافة زر تسجيل الخروج
     return (
         <div style={{ backgroundColor: '#1e1610', color: '#f1e4d3', minHeight: '100vh', padding: '40px', fontFamily: 'Courier New, monospace' }}>
-            <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '40px', position: 'relative' }}>
+                {/* زر تسجيل الخروج في الزاوية */}
+                <button 
+                    onClick={handleLogout}
+                    style={{ position: 'absolute', top: '0', left: '10px', backgroundColor: '#c0392b', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                >
+                    تسجيل الخروج 🚪
+                </button>
+
                 <span style={{ fontSize: '50px' }}>🔍</span>
                 <h1 style={{ color: '#d4af37', margin: '10px 0' }}>221B Booking Agency</h1>
                 <p style={{ letterSpacing: '2px', textTransform: 'uppercase', color: '#a09080' }}>لوحة تحكم المحقق</p>
@@ -79,7 +145,7 @@ function AdminPage() {
                         </div>
                         <div style={{ padding: '10px 20px', backgroundColor: '#1e1610', borderRadius: '4px', border: '1px solid #524132', textAlign: 'center' }}>
                             <div style={{ fontSize: '12px', color: '#a09080', marginBottom: '5px' }}>الحالة الأمنية</div>
-                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#27ae60' }}>مستقر</div>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#27ae60' }}>مستقر ✅</div>
                         </div>
                     </div>
                 </div>
