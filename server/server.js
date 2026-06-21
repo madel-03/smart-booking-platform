@@ -10,12 +10,17 @@ const { body, validationResult } = require('express-validator');
 
 const app = express();
 
-app.use(helmet());
-app.use(mongoSanitize());
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+app.use(mongoSanitize({ replaceWith: '_' }));
 
 const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
 app.use(cors({
     origin: allowedOrigin,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret'],
     optionsSuccessStatus: 200
 }));
 
