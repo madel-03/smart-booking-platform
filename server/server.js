@@ -1,20 +1,36 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
- 
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const { body, validationResult } = require('express-validator');
+
 const app = express();
- 
-app.use(cors()); // يفتح الاتصال تلقائياً لجميع الروابط
+
+app.use(helmet());
+app.use(mongoSanitize());
+
+const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+app.use(cors({
+    origin: allowedOrigin,
+    optionsSuccessStatus: 200
+}));
+
 app.use(express.json());
- 
-// رابط MongoDB من البيئة
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { error: 'طلبات كثيرة جداً من هذا الجهاز، يرجى المحاولة لاحقاً بعد 15 دقيقة.' }
+});
+app.use('/api/', limiter);
+
 const MONGO_URI = process.env.MONGODB_URI;
- 
 mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ تم الاتصال بقاعدة البيانات بنجاح!'))
     .catch(err => console.error('❌ خطأ في الاتصال بقاعدة البيانات:', err));
- 
-// إنشاء Schema
+
 const appointmentSchema = new mongoose.Schema({
     customerName: String,
     phone: String,
@@ -23,39 +39,66 @@ const appointmentSchema = new mongoose.Schema({
     time: String,
     status: {
         type: String,
+        enum: ['Pending', 'Approved', 'Cancelled'],
         default: 'Pending'
     }
 }, { versionKey: false });
- 
-// إنشاء Model
+
 const Appointment = mongoose.model('Appointment', appointmentSchema);
- 
-// 1. جلب جميع الحجوزات
-app.get('/api/appointments', async (req, res) => {
+
+const validateAppointment = [
+    body('customerName').trim().notEmpty().escape().withMessage('الاسم مطلوب وبدون رموز خاصة'),
+    body('phone').trim().isNumeric().withMessage('رقم الهاتف يجب أن يحتوي على أرقام فقط'),
+    body('service').trim().notEmpty().escape().withMessage('الخدمة مطلوبة'),
+    body('date').trim().notEmpty().escape().withMessage('التاريخ مطلوب'),
+    body('time').trim().notEmpty().escape().withMessage('الوقت مطلوب'),
+    (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+        next();
+    }
+];
+
+const isAdmin = (req, res, next) => {
+    const adminSecret = req.headers['x-admin-secret'];
+    if (adminSecret === process.env.ADMIN_SECRET_KEY) {
+        next();
+    } else {
+        return res.status(403).json({ error: 'غير مصرح لك بالوصول لهذه البيانات.' });
+    }
+};
+
+app.get('/api/appointments', isAdmin, async (req, res) => {
     try {
         const appointments = await Appointment.find({});
         res.json(appointments);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'حدث خطأ في السيرفر' });
     }
 });
- 
-// 2. إضافة حجز جديد
-app.post('/api/appointments', async (req, res) => {
+
+app.post('/api/appointments', validateAppointment, async (req, res) => {
     try {
-        const newAppointment = new Appointment(req.body);
+        const { customerName, phone, service, date, time } = req.body;
+        const newAppointment = new Appointment({ customerName, phone, service, date, time });
         const savedAppointment = await newAppointment.save();
         res.status(201).json({
             message: '🎉 تم تسجيل الحجز بنجاح!',
             appointment: savedAppointment
         });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'حدث خطأ أثناء حفظ الحجز' });
     }
 });
 
-// 3. تعديل حالة حجز معين (جديد)
-app.patch('/api/appointments/:id', async (req, res) => {
+app.patch('/api/appointments/:id', isAdmin, [
+    body('status').isIn(['Pending', 'Approved', 'Cancelled']).withMessage('الحالة المرسلة غير صالحة')
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
     try {
         const { status } = req.body;
         const updatedAppointment = await Appointment.findByIdAndUpdate(
@@ -68,12 +111,11 @@ app.patch('/api/appointments/:id', async (req, res) => {
         }
         res.json(updatedAppointment);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'فشل تعديل الحجز' });
     }
 });
 
-// 4. مسح حجز معين (جديد)
-app.delete('/api/appointments/:id', async (req, res) => {
+app.delete('/api/appointments/:id', isAdmin, async (req, res) => {
     try {
         const deletedAppointment = await Appointment.findByIdAndDelete(req.params.id);
         if (!deletedAppointment) {
@@ -81,13 +123,11 @@ app.delete('/api/appointments/:id', async (req, res) => {
         }
         res.json({ message: 'تم حذف الموعد بنجاح' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'فشل حذف الحجز' });
     }
 });
- 
-// تشغيل السيرفر
+
 const PORT = process.env.PORT || 5000;
- 
 app.listen(PORT, () => {
-    console.log(`🔥 Server running on port ${PORT}`);
+    console.log(`🔥 Server running securely on port ${PORT}`);
 });
