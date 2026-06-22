@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-const ADMIN_SECRET = 'Sherlock221B';
+const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET;
 
 function AdminPage() {
     const [appointments, setAppointments] = useState([]);
