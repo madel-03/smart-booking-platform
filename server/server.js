@@ -15,8 +15,9 @@ app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// ✅ تم تفعيله - الحماية من NoSQL Injection
-app.use(mongoSanitize({ replaceWith: '_' }));
+// ⚠️ معطّل مؤقتاً بسبب عدم التوافق مع الإصدار الحالي
+// TODO: حدّث express-mongo-sanitize أو استبدله بحل آخر
+// app.use(mongoSanitize({ replaceWith: '_' }));
 
 const allowedOrigin = process.env.CLIENT_URL;
 app.use(cors({
