@@ -1,30 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
-// جلب الرابط من متغيرات البيئة في Vercel، وإذا مش موجود يستخدم المحلي كاحتياط
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const ADMIN_SECRET = 'Sherlock221B';
 
 function AdminPage() {
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
-    // 🔐 حالات التحقق من كلمة السر (تتحقق إذا كان مسجل دخول مسبقاً في المتصفح)
     const [isAuthenticated, setIsAuthenticated] = useState(localStorage.getItem('isAdminLoggedIn') === 'true');
     const [passwordInput, setPasswordInput] = useState('');
     const [loginError, setLoginError] = useState('');
 
-    // جلب المواعيد عند تحميل الصفحة (فقط إذا كان مصرحاً له)
     useEffect(() => {
         if (isAuthenticated) {
             fetchAppointments();
         }
     }, [isAuthenticated]);
 
+    const authHeaders = {
+        headers: { 'x-admin-secret': ADMIN_SECRET }
+    };
+
     const fetchAppointments = async () => {
         try {
             setLoading(true);
-            const response = await axios.get(`${API_URL}/api/appointments`);
+            const response = await axios.get(`${API_URL}/api/appointments`, authHeaders);
             setAppointments(response.data);
             setError(null);
         } catch (err) {
@@ -35,11 +36,9 @@ function AdminPage() {
         }
     };
 
-    // 🔑 دالة التحقق من كلمة السر عند الضغط على زر الدخول
     const handleLogin = (e) => {
         e.preventDefault();
-       
-        if (passwordInput === 'sherlock221b') {
+        if (passwordInput === ADMIN_SECRET) {
             localStorage.setItem('isAdminLoggedIn', 'true');
             setIsAuthenticated(true);
             setLoginError('');
@@ -48,17 +47,19 @@ function AdminPage() {
         }
     };
 
-    // 🚪 دالة تسجيل الخروج (إلغاء التصريح)
     const handleLogout = () => {
         localStorage.removeItem('isAdminLoggedIn');
         setIsAuthenticated(false);
         setPasswordInput('');
     };
 
-    // تحديث حالة الحجز (PATCH)
     const handleStatusChange = async (id, newStatus) => {
         try {
-            const response = await axios.patch(`${API_URL}/api/appointments/${id}`, { status: newStatus });
+            const response = await axios.patch(
+                `${API_URL}/api/appointments/${id}`,
+                { status: newStatus },
+                authHeaders
+            );
             if (response.status === 200) {
                 setAppointments(appointments.map(app => app._id === id ? { ...app, status: newStatus } : app));
                 alert('🎉 تم تحديث حالة القضية بنجاح!');
@@ -69,11 +70,10 @@ function AdminPage() {
         }
     };
 
-    // حذف الحجز نهائياً (DELETE)
     const handleDelete = async (id) => {
         if (window.confirm('هل أنت متأكد من إغلاق وحذف ملف هذه القضية نهائياً؟')) {
             try {
-                const response = await axios.delete(`${API_URL}/api/appointments/${id}`);
+                const response = await axios.delete(`${API_URL}/api/appointments/${id}`, authHeaders);
                 if (response.status === 200) {
                     setAppointments(appointments.filter(app => app._id !== id));
                     alert('🗑️ تم مسح سجل القضية بنجاح!');
@@ -85,7 +85,6 @@ function AdminPage() {
         }
     };
 
-    // 🛑 1. إذا كان المستخدم غير مسجل دخول، اعرض صفحة القفل الثيمية الخاصة بالوكالة
     if (!isAuthenticated) {
         return (
             <div style={{ backgroundColor: '#1e1610', color: '#f1e4d3', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'Courier New, monospace', padding: '20px' }}>
@@ -93,7 +92,6 @@ function AdminPage() {
                     <span style={{ fontSize: '60px' }}>🔒</span>
                     <h2 style={{ color: '#d4af37', marginTop: '10px' }}>منطقة محظورة</h2>
                     <p style={{ color: '#a09080', fontSize: '14px', marginBottom: '25px' }}>يتطلب الدخول إلى لوحة تحكم المحقق كلمة سر مشفرة.</p>
-                    
                     <form onSubmit={handleLogin}>
                         <input 
                             type="password" 
@@ -105,30 +103,26 @@ function AdminPage() {
                         />
                         <button 
                             type="submit"
-                            style={{ width: '100%', padding: '12px', backgroundColor: '#d4af37', color: '#1e1610', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold', transition: '0.2s' }}
+                            style={{ width: '100%', padding: '12px', backgroundColor: '#d4af37', color: '#1e1610', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}
                         >
                             فك التشفير والدخول 🕵️‍♂️
                         </button>
                     </form>
-                    
                     {loginError && <p style={{ color: '#e74c3c', marginTop: '15px', fontSize: '14px', fontWeight: 'bold' }}>{loginError}</p>}
                 </div>
             </div>
         );
     }
 
-    // 🟢 2. إذا كان مسجل دخول بنجاح، اعرض لوحة التحكم الكاملة مع إضافة زر تسجيل الخروج
     return (
         <div style={{ backgroundColor: '#1e1610', color: '#f1e4d3', minHeight: '100vh', padding: '40px', fontFamily: 'Courier New, monospace' }}>
             <div style={{ textAlign: 'center', marginBottom: '40px', position: 'relative' }}>
-                {/* زر تسجيل الخروج في الزاوية */}
                 <button 
                     onClick={handleLogout}
                     style={{ position: 'absolute', top: '0', left: '10px', backgroundColor: '#c0392b', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
                 >
                     تسجيل الخروج 🚪
                 </button>
-
                 <span style={{ fontSize: '50px' }}>🔍</span>
                 <h1 style={{ color: '#d4af37', margin: '10px 0' }}>221B Booking Agency</h1>
                 <p style={{ letterSpacing: '2px', textTransform: 'uppercase', color: '#a09080' }}>لوحة تحكم المحقق</p>
@@ -172,7 +166,7 @@ function AdminPage() {
                             </thead>
                             <tbody>
                                 {appointments.map((app) => (
-                                    <tr key={app._id} style={{ borderBottom: '1px solid #3d2f24', transition: 'background 0.2s' }}>
+                                    <tr key={app._id} style={{ borderBottom: '1px solid #3d2f24' }}>
                                         <td style={{ padding: '15px 12px', fontWeight: 'bold' }}>{app.customerName}</td>
                                         <td style={{ padding: '15px 12px', color: '#a09080' }}>{app.phone}</td>
                                         <td style={{ padding: '15px 12px' }}>{app.service}</td>
@@ -193,7 +187,7 @@ function AdminPage() {
                                         <td style={{ padding: '15px 12px', textAlign: 'center' }}>
                                             {app.status === 'Pending' && (
                                                 <button 
-                                                    onClick={() => handleStatusChange(app._id, 'Resolved')}
+                                                    onClick={() => handleStatusChange(app._id, 'Approved')}
                                                     style={{ backgroundColor: '#27ae60', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', marginLeft: '8px', fontSize: '12px', fontWeight: 'bold' }}
                                                 >
                                                     حل القضية
