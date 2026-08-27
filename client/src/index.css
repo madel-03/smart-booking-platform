@@ -109,3 +109,12 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+.date-picker-input {
+  text-align: center;
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+}
+.date-picker-wrapper {
+  width: 100%;
+}

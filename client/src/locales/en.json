@@ -1,0 +1,71 @@
+{
+  "app": {
+    "title": "221B Booking Agency",
+    "subtitle": "Smart Booking Platform — Under Investigation & Professional Scheduling",
+    "adminTitle": "221B Booking Agency",
+    "adminSubtitle": "Detective Dashboard"
+  },
+  "nav": {
+    "home": "Home",
+    "admin": "Dashboard",
+    "logout": "Logout 🚪",
+    "login": "Login"
+  },
+  "booking": {
+    "title": "📋 Register Case (New Booking Request)",
+    "clientName": "👤 Client Name (Suspect):",
+    "clientNamePlaceholder": "John Watson...",
+    "phone": "📞 Contact (Mobile Number):",
+    "phonePlaceholder": "05xxxxxxxx",
+    "service": "💼 Service Type (Mission):",
+    "servicePlaceholder": "Select the mission...",
+    "serviceMedical": "Medical Clinic (Dr. Watson)",
+    "serviceInvestigation": "Private Investigation & Consultation",
+    "serviceFitness": "Intensive Fitness Training",
+    "date": "📅 Appointment Date:",
+    "time": "⏰ Zero Hour (Time):",
+    "submit": "🔐 Confirm & Schedule Appointment",
+    "success": "🎉 Booking registered successfully!",
+    "error": "❌ Failed to connect to server"
+  },
+  "admin": {
+    "login": {
+      "title": "🔒 Restricted Area",
+      "subtitle": "Access to the detective dashboard requires an encrypted password.",
+      "placeholder": "Enter security password...",
+      "button": "Decrypt & Enter 🕵️‍♂️",
+      "error": "❌ Incorrect password, try again detective."
+    },
+    "dashboard": {
+      "title": "📊 Case Dashboard",
+      "total": "Total Bookings",
+      "security": "Security Status",
+      "securityStable": "Stable ✅",
+      "loading": "🕵️‍♂️ Searching and gathering scheduled evidence...",
+      "empty": "...No scheduled cases at the moment",
+      "error": "Failed to fetch data from server"
+    },
+    "table": {
+      "client": "Suspect (Client)",
+      "phone": "Contact Number",
+      "service": "Mission (Service)",
+      "date": "Date",
+      "time": "Time",
+      "status": "Status",
+      "actions": "Actions",
+      "pending": "Pending ⏳",
+      "approved": "Case Solved ✅",
+      "resolve": "Solve Case",
+      "delete": "Delete Record",
+      "deleteConfirm": "Are you sure you want to close and delete this case file permanently?",
+      "deleteSuccess": "🗑️ Case record deleted successfully!",
+      "deleteError": "❌ Failed to delete case.",
+      "updateSuccess": "🎉 Case status updated successfully!",
+      "updateError": "❌ Failed to update status, please try again."
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred"
+  }
+}
